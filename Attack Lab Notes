@@ -1,0 +1,120 @@
+Attack Lab Notes
+
+- when passing arguments, the first 6 arguments go to %rdi, %rsi, %rdx, %rcx, %r8, and %r9
+- my cookie: 0x5a4f796b
+
+1 unsigned getbuf()
+2 {
+3 char buf[BUFFER_SIZE];
+4 Gets(buf);
+5 return 1;
+6 }
+The function Gets is similar to the standard library function gets—it reads a string from standard input
+(terminated by ‘\n’ or end-of-file) and stores it (along with a null terminator) at the specified destination.
+In this code, you can see that the destination is an array buf, declared as having BUFFER_SIZE bytes. At
+the time your targets were generated, BUFFER_SIZE was a compile-time constant specific to your version
+of the programs.
+
+- input that you type gets stored at buf, which is an array with a constant BUFFER-SIZE number of bytes 
+
+/// LEVEL 1 ///
+
+- want to execute the code for touch1() when we return from getbuf()
+- position a byte representation of the starting address for touch1 so that the ret
+instruction at the end of the code for getbuf will transfer control to touch1
+- where is the top of the stack (when return address is) relative to buf (where the input is stored)
+- location of buf: rsp - 40 bytes (since that's the argunemnt we pass to Gets())
+- address for touch1(): 000000000040173c
+- just pad with 40 bytes then put the address of touch1 
+
+/// LEVEL 2 ///
+
+- want to execute code for touch2() when we return from getbuf() and also pass our cookie to touch2() as a param
+- want to position a byte representation of the address of your injected code in such a way that ret instruction at the end of the code for getbuf will transfer control to it
+- recall that the first argument to a function is passed in register %rdi.
+- your injected code should set the register to your cookie, and then use a ret instruction to transfer control to the first instruction in touch2.
+- injected code (mov param to %rdi and retq) is placed in buf and we make the top of rsp point to buf to run the injected code but we also make the spot above that point to touch2() so it pops off the address of buf, runs the code, then returns and pops off the address of touch2() to run that
+- address for touch2(): 0000000000401768
+- address of buf: 0x55681718 (constant)
+
+/// LEVEL 3 ///
+Your task is to get CTARGET to execute the code for touch3 rather than returning to test. You must
+make it appear to touch3 as if you have passed a string representation of your cookie as its argument.
+• You will need to include a string representation of your cookie in your exploit string. The string should
+consist of the eight hexadecimal digits (ordered from most to least significant) without a leading “0x.”
+• Recall that a string is represented in C as a sequence of bytes followed by a byte with value 0. Type
+“man ascii” on any Linux machine to see the byte representations of the characters you need.
+• Your injected code should set register %rdi to the address of this string.
+• When functions hexmatch and strncmp are called, they push data onto the stack, overwriting
+portions of memory that held the buffer used by getbuf. As a result, you will need to be careful
+where you place the string representation of your cookie.
+
+- my cookie: 0x5a4f796b
+- my cookie as a string: 356134663739366200
+- since the functions might overwrite the memory that held the buffer, put the cookie past the last return address (past the return for touch3)
+- address for touch3() = 000000000040183c
+- address of buf: 0x55681718 (constant)
+- address of where to put the cookie: 0x55681718 + 0x38 = 0x55681750
+
+/// LEVEL 4 ///
+All the gadgets you need can be found in the region of the code for rtarget demarcated by the
+functions start_farm and mid_farm.
+• You can do this attack with just two gadgets.
+• When a gadget uses a popq instruction, it will pop data from the stack. As a result, your exploit
+string will contain a combination of gadget addresses and data.
+- popq reads the value at %rsp into destination and then increments %rsp by 8 bytes 
+
+STACK DIAGRAM (growing down)
+address of touch2() = 0x401768
+gadget 2 = mov %rax to %rdi  (cookie value now in %rdi) : hex = 48 89 c7 --> address: 0x4018e7
+value of cookie = 0x5a4f796b
+gadget 1 = popq %rax (get the value of the cookie into %rax) : hex = 58 --> address: 0x4018d5
+padded buffer (completely filled with garbage)
+
+/// LEVEL 5 ///
+Phase 5 requires you to do an ROP attack on RTARGET to invoke function touch3 with a pointer to a string
+representation of your cookie.
+
+- effect of movl instruction on the upper 4 bytes of a register: sets the higher order 4 bytes to 0
+
+
+STACK DIAGRAM (growing down)
+
+completely padded buffer
+
+
+// POSSIBLE USEFUL GADGETS ///
+
+MOVQ:
+movq %rsp, %rax = 48 89 e0 c3  (address: 401931)// put the cookie at %rsp so then we can move its address into %rax
+movq %rax, %rdi = 48 89 c7 c3 (address: 4018e7)
+movq %rax, %rdi = 48 89 c7 90 c3 (address: 4018ee)
+
+POPQ:
+popq %rax = 58 c3 (address: 4018d5)
+
+MOVL:
+movl %eax, %edi = 89 c7 c3 
+movl %eax, %edi = 89 c7 90 c3
+movl %eax, %ecx = 89 c1 90 c3 (4019c2)
+movl %ecx, %edx = 89 ca c3
+movl %esp, %eax = 89 e0 90 c3
+movl %esp, %eax = 89 e0 c3
+movl %edx, %esi = 89 d6 c3 (4019c9)
+movl %ecx, %edx = 89 ca 90 c3 (40199c)
+movl %eax, %ecx = 89 c1 90 c3
+
+2-BYTE FUNCTION NOP:
+andb %dl = 20 d2 c3
+andb %bl = 20 db c3
+orb %al = 08 c0 c3
+orb %dl = 08 d2 c3
+cmpb %al = 38 c0 c3
+testb %bl = 84 db c3
+
+NOP:
+nop (does nothing except incrememnt the program counter) = 90 (address: 401938)
+
+0000000000401907 <add_xy>:
+  401907:	48 8d 04 37          	lea    (%rdi,%rsi,1),%rax
+  40190b:	c3                   	retq   

